@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Video Site</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --text-color: #ffffff;
+            --card-bg: rgba(255, 255, 255, 0.05);
+            --accent: #e50914; /* Netflix Red default */
+            --font: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+        }
+
+        body { 
+            margin: 0; 
+            padding: 0; 
+            font-family: var(--font); 
+            background-color: var(--bg-color); 
+            color: var(--text-color);
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+            min-height: 100vh;
+            transition: all 0.5s ease;
+        }
+
+        /* --- THEMES --- */
+        /* 1. Modern Dark (Netflix Style) */
+        body[data-theme="modern"] {
+            --bg-color: #141414;
+            --text-color: #fff;
+            --card-bg: #1f1f1f;
+            --accent: #e50914;
+        }
+        /* 2. Clean Light (YouTube Style) */
+        body[data-theme="clean"] {
+            --bg-color: #f9f9f9;
+            --text-color: #0f0f0f;
+            --card-bg: #ffffff;
+            --accent: #065fd4;
+        }
+        /* 3. Neon Gamer (Cyberpunk Style) */
+        body[data-theme="neon"] {
+            --bg-color: #0b0014;
+            --text-color: #00ffcc;
+            --card-bg: rgba(0, 255, 204, 0.05);
+            --accent: #d600ff;
+            border-top: 5px solid var(--accent);
+        }
+
+        /* Navbar */
+        header { padding: 40px 20px; text-align: center; backdrop-filter: blur(5px); }
+        h1 { margin: 0; font-size: 3.5rem; letter-spacing: -1px; text-shadow: 0 2px 10px rgba(0,0,0,0.5); }
+
+        /* Loading Screen */
+        #loader {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: #000; z-index: 9999; display: flex;
+            justify-content: center; align-items: center; flex-direction: column;
+            transition: opacity 0.5s;
+        }
+        .spinner {
+            width: 50px; height: 50px; border: 5px solid #333;
+            border-top: 5px solid var(--accent); border-radius: 50%;
+            animation: spin 1s linear infinite; margin-bottom: 20px;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Grid */
+        .container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 30px;
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+            padding-bottom: 100px;
+        }
+
+        /* Video Card */
+        .video-wrapper {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            transition: transform 0.3s, box-shadow 0.3s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        body[data-theme="neon"] .video-wrapper {
+            border: 1px solid var(--text-color);
+            box-shadow: 0 0 15px var(--accent);
+        }
+
+        .video-wrapper:hover {
+            transform: translateY(-8px);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.4);
+        }
+
+        .vid-frame {
+            position: relative;
+            padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+            height: 0;
+            background: #000;
+        }
+        .vid-frame iframe {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none;
+        }
+
+        .vid-info { padding: 15px; }
+        .vid-title { font-weight: bold; font-size: 1.1rem; margin-bottom: 5px; color: var(--text-color); }
+        
+    </style>
+</head>
+<body>
+
+    <!-- Loading Screen -->
+    <div id="loader">
+        <div class="spinner"></div>
+        <div style="color:white; font-family:sans-serif;">Loading Studio...</div>
+    </div>
+
+    <header>
+        <h1 id="pageTitle">...</h1>
+    </header>
+
+    <div class="container" id="contentArea"></div>
+
+<script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-app.js";
+    import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/9.23.0/firebase-database.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCS8jC7EMA9qg84LF0qaqunhO0NRzhkp9c",
+      authDomain: "games-7-98b09.firebaseapp.com",
+      databaseURL: "https://games-7-98b09-default-rtdb.firebaseio.com",
+      projectId: "games-7-98b09",
+      storageBucket: "games-7-98b09.firebasestorage.app",
+      messagingSenderId: "686134480926",
+      appId: "1:686134480926:web:ac0b6814d4674766d65e0f"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // Load Settings
+    onValue(ref(db, 'settings'), (snapshot) => {
+        const data = snapshot.val();
+        if(data) {
+            // Apply Theme
+            document.body.setAttribute('data-theme', data.theme || 'modern');
+            
+            // Apply Content
+            document.getElementById('pageTitle').innerText = data.name || "My Video Site";
+            document.title = data.name || "My Video Site";
+
+            // Apply Background Image if exists
+            if(data.bgImage && data.bgImage.length > 5) {
+                document.body.style.backgroundImage = `linear-gradient(rgba(0,0,0,0.7), rgba(0,0,0,0.7)), url('${data.bgImage}')`;
+            } else {
+                document.body.style.backgroundImage = 'none';
+            }
+        }
+    });
+
+    // Load Videos
+    onValue(ref(db, 'videos'), (snapshot) => {
+        const container = document.getElementById('contentArea');
+        container.innerHTML = "";
+        
+        const data = snapshot.val();
+        if(data) {
+            const videos = Object.values(data).reverse(); 
+            videos.forEach(vid => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'video-wrapper';
+                
+                // Use the standardized HTML or fallback
+                let finalHtml = vid.html;
+                
+                wrapper.innerHTML = `
+                    <div class="vid-frame">${finalHtml}</div>
+                    <div class="vid-info">
+                        <div class="vid-title">${vid.title || "Untitled Video"}</div>
+                    </div>
+                `;
+                container.appendChild(wrapper);
+            });
+        }
+        
+        // Remove Loader
+        setTimeout(() => {
+            const loader = document.getElementById('loader');
+            if(loader) {
+                loader.style.opacity = '0';
+                setTimeout(() => loader.remove(), 500);
+            }
+        }, 1000);
+    });
+</script>
+</body>
+</html>
